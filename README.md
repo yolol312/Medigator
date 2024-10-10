@@ -80,7 +80,16 @@
 <img src="https://github.com/dbehdgns1215/Medigator/assets/77192122/c8d7674f-a676-4172-8114-0c5b92bedfcc">
 
 <h3>완성 디자인</h3>
-![image](https://github.com/user-attachments/assets/f5a7ba3a-29e6-4ed2-a68d-4ed806dd2bf6)
+<img src="https://github.com/user-attachments/assets/f5a7ba3a-29e6-4ed2-a68d-4ed806dd2bf6">
+<img src="https://github.com/user-attachments/assets/d298fdcb-a154-4a97-8d0b-498d9a3891e3">
+<img src="https://github.com/user-attachments/assets/e5226931-3ca6-42ba-a417-88a5daa4c900">
+<img src="https://github.com/user-attachments/assets/cd388018-b501-4a49-8fde-e8aa08e975ee">
+<img src="https://github.com/user-attachments/assets/94599e46-d1d7-46eb-889b-412dcf3adb3e">
+<img src="https://github.com/user-attachments/assets/afe0cc12-0ff8-4fc3-85bf-e7572c9b4650">
+<img src="https://github.com/user-attachments/assets/b75adb1c-be5e-4b90-9df8-f01e00d038cd">
+<img src="https://github.com/user-attachments/assets/e1840cfa-50e0-4221-af62-0373e720f681">
+<img src="https://github.com/user-attachments/assets/2e10bb4b-d707-412c-b646-e3d795a98ee5">
+
 
 
 
