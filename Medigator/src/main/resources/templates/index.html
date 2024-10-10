@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Medigator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.20.0/cytoscape.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
+            transition: margin-left 0.5s; /* 본문 이동 효과 추가 */
+        }
+        #RiskAnalysis, #MedicineList, #MedicineNews, #DiseaseList{
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 20px; /* 요소들 사이의 간격 설정 */
+        }
+        #MedicineConnect {
+            display: flex;
+            justify-content: center;
+            flex: 0 1 calc(100% - 20px); /* 여백을 고려한 너비 설정 */
+            box-sizing: border-box; /* 패딩과 테두리를 너비 계산에 포함 */
+        }
+        #cy {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+        .menu-bar {
+            width: 250px; /* 메뉴 바의 기본 너비를 지정 */
+            height: 100%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: -220px; /* 메뉴 바를 화면 왼쪽 바깥으로 이동시켜 숨깁니다 */
+            background-color: white;
+            overflow-x: hidden;
+            transition: left 0.5s; /* 'left' 속성을 이용한 애니메이션 적용 */
+            padding-top: 60px;
+        }
+        .active-tab {
+            color: #057277;
+            border-color: #057277;
+        }
+        .riskDiv {
+            flex: 0 1 calc(33% - 20px); /* 여백을 고려한 너비 설정 */
+            box-sizing: border-box; /* 패딩과 테두리를 너비 계산에 포함 */
+        }
+        .medicineDiv {
+            flex: 0 1 calc(25% - 20px); /* 여백을 고려한 너비 설정 */
+            box-sizing: border-box; /* 패딩과 테두리를 너비 계산에 포함 */
+        }
+        .newsDiv {
+            flex: 0 1 calc(25% - 20px); /* 여백을 고려한 너비 설정 */
+            box-sizing: border-box; /* 패딩과 테두리를 너비 계산에 포함 */
+        }
+        #tooltip {
+            display: none;
+            position: absolute;
+            top: 23%; /* 부모 요소 상단으로부터 5% 위치로 설정 */
+            left: 50%; /* 부모 요소 좌측으로부터 50% 위치로 설정 */
+            transform: translate(-50%, -50%); /* 요소의 중앙 정렬 */
+            background-color: #fff;
+            border: 1px solid #000;
+            z-index: 10;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+            50% {
+                transform: translateY(-2%);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+        @keyframes bounce_big {
+            0%, 100% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+            50% {
+                transform: translateY(-4.5%);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+        .animation-bounce-big {
+            animation: bounce_big 1s infinite;
+        }
+        .animation-bounce {
+            animation: bounce 1s infinite;
+        }
+        .bounce-animation:hover {
+            animation: none; /* 커서를 가져다댔을 때 애니메이션 일시 정지 */
+        }
+        /* 페이드 인 애니메이션 */
+        #content {
+            opacity: 0;
+            transition: opacity 0.6s;
+        }
+        #content.fade-enter-active {
+            opacity: 1;
+        }
+        #content.fade-leave-active {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+<main id="content" class="relative w-full overflow-hidden dark:bg-gray-800" style="background-color: #eaf8f9;">
+    <div class="flex items-start justify-between overflow-hidden">
+        <div id="menuBar" onmouseleave="closeMenu()" class="menu-bar rounded-tr-2xl rounded-br-2xl overflow-hidden h-full dark:bg-gray-700" style="background-color: #057277;">
+            <div class="flex items-center justify-start pt-6 ml-8">
+                <p class="text-xl text-white font-bold dark:text-white">
+                    Menu
+                </p>
+            </div>
+            <nav class="mt-6">
+                <div>
+                    <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 dark:text-white" href="#" style="border-left-color: #eaf8f9;">
+                        <span class="text-left">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1472 992v480q0 26-19 45t-45 19h-384v-384h-256v384h-384q-26 0-45-19t-19-45v-480q0-1 .5-3t.5-3l575-474 575 474q1 2 1 6zm223-69l-62 74q-8 9-21 11h-3q-13 0-21-7l-692-577-692 577q-12 8-24 7-13-2-21-11l-62-74q-8-10-7-23.5t11-21.5l719-599q32-26 76-26t76 26l244 204v-195q0-14 9-23t23-9h192q14 0 23 9t9 23v408l219 182q10 8 11 21.5t-7 23.5z">
+                                </path>
+                            </svg>
+                        </span>
+                        <span class="mx-2 text-sm font-normal">
+                            Home
+                        </span>
+                    </a>
+                    <th:block th:if="${session.loginId}">
+                        <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/MyPage">
+                            <span class="text-left">
+                                <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                  <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                            <span class="mx-2 text-sm font-normal">
+                                My Page
+                            </span>
+                        </a>
+                    </th:block>
+                    <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Single">
+                        <span class="text-left">
+                            <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                              <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                        <span class="mx-2 text-sm font-normal">
+                            Medicine Search
+                        </span>
+                    </a>
+                    <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Analysis">
+                        <span class="text-left">
+                            <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                <path fill-rule="evenodd" d="M16.098 2.598a3.75 3.75 0 1 1 3.622 6.275l-1.72.46V12a.75.75 0 0 1-.22.53l-.75.75a.75.75 0 0 1-1.06 0l-.97-.97-7.94 7.94a2.56 2.56 0 0 1-1.81.75 1.06 1.06 0 0 0-.75.31l-.97.97a.75.75 0 0 1-1.06 0l-.75-.75a.75.75 0 0 1 0-1.06l.97-.97a1.06 1.06 0 0 0 .31-.75c0-.68.27-1.33.75-1.81L11.69 9l-.97-.97a.75.75 0 0 1 0-1.06l.75-.75A.75.75 0 0 1 12 6h2.666l.461-1.72c.165-.617.49-1.2.971-1.682Zm-3.348 7.463L4.81 18a1.06 1.06 0 0 0-.31.75c0 .318-.06.63-.172.922a2.56 2.56 0 0 1 .922-.172c.281 0 .551-.112.75-.31l7.94-7.94-1.19-1.19Z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                        <span class="mx-2 text-sm font-normal">
+                            Medicine Analysis
+                        </span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+        <div class="flex flex-col w-full md:space-y-4">
+            <header class="z-40 flex items-center justify-between w-full h-16">
+                <div class="block ml-6 lg:hidden">
+                    <button class="flex items-center p-2 text-gray-500 bg-white rounded-full shadow text-md">
+                        <svg width="20" height="20" class="text-gray-400" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1664 1344v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative z-20 flex flex-col justify-end h-full px-3 md:w-full">
+                    <div class="relative flex items-center justify-end w-full p-1 space-x-4">
+                        <span class="w-1 h-8 bg-gray-200 rounded-lg">
+                        </span>
+                        <a href="/member/MyPage" class="relative p-2 bg-white rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                            </svg>
+                        </a>
+                        <a href="/member/MyPage">
+                            <button class="flex items-center text-gray-500 dark:text-white text-md" th:if="${session.loginId}">
+                                <span th:text="${session.loginId}"></span>
+                                <svg width="20" height="20" class="ml-2 text-gray-400" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M1408 704q0 26-19 45l-448 448q-19 19-45 19t-45-19l-448-448q-19-19-19-45t19-45 45-19h896q26 0 45 19t19 45z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </a>
+                        <th:block th:if="${session.loginId}">
+                            <a href="/member/logout" class="no-underline">
+                                <button type="button" class="py-2 px-4 flex justify-center items-center hover:bg-red-700 focus:ring-red-500 focus:ring-offset-red-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="background-color: #C94F4F; width: 110px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                                    </svg>
+                                    Logout
+                                </button>
+                            </a>
+                        </th:block>
+                        <th:block th:unless="${session.loginId}">
+                            <a href="/member/login" class="no-underline">
+                                <button type="button" class="py-2 px-4 flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="width: 100px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
+                                    </svg>
+                                    Login
+                                </button>
+                            </a>
+                        </th:block>
+                    </div>
+                </div>
+            </header>
+            <div class="h-screen px-4 pb-24 overflow-auto md:px-6">
+                <th:block th:if="${session.loginId}">
+                    <div class="relative rounded-2xl overflow-hidden flex justify-center ml-28">
+                        <div class="w-full">
+                            <h1 class="text-4xl font-semibold text-gray-800 dark:text-white">
+                                안녕하세요, <span th:text="${session.loginId}"></span>님
+                            </h1>
+                            <h2 class="text-gray-400 text-md">
+                                오늘도 &#x27;Medigator&#x27;를 통해 건강한 약 복용을 도와드리겠습니다.
+                            </h2>
+                        </div>
+                    </div>
+                </th:block>
+                <!-- Modal -->
+                <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50">
+                    <div class="w-100 p-4 m-auto bg-white shadow-lg rounded-2xl dark:bg-gray-800">
+                        <div class="w-full h-full text-center">
+                            <div class="flex flex-col justify-between h-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6 w-12 h-12 m-auto mt-4 text-green-500">
+                                    <path fill-rule="evenodd" d="M4.848 2.771A49.144 49.144 0 0 1 12 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 0 1-3.476.383.39.39 0 0 0-.297.17l-2.755 4.133a.75.75 0 0 1-1.248 0l-2.755-4.133a.39.39 0 0 0-.297-.17 48.9 48.9 0 0 1-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97ZM6.75 8.25a.75.75 0 0 1 .75-.75h9a.75.75 0 0 1 0 1.5h-9a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H7.5Z" clip-rule="evenodd" />
+                                </svg>
+                                <div class="flex items-end my-6 space-x-2">
+                                    <p id="diseaseName" class="text-3xl font-bold text-black dark:text-white">
+                                    </p>
+                                </div>
+                                <div id="CarditemName" class="dark:text-white">
+                                </div>
+                                <div class="flex items-center justify-between w-full gap-4 mt-8">
+                                    <button type="button" onclick="closeModal()" class="py-2 px-4 bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center mt-5 mb-5">
+                    <div class="text-xl font-bold text-center text-gray-500 border-b border-gray-200 ">
+                        <ul class="flex flex-wrap -mb-px">
+                            <li class="mr-2">
+                                <a id="dashboard" href="" class="tab-link active-tab inline-block p-4  border-b-2 rounded-t-lg active hover:text-[#057277] hover:border-[#057277]" >
+                                    Dashboard
+                                </a>
+                            </li>
+                            <li class="mr-2">
+                                <a id="news_dangerousness" href="" class="tab-link inline-block p-4  border-b-2 rounded-t-lg active hover:text-[#057277] hover:border-[#057277]" >
+                                    News & Dangerousness
+                                </a>
+                            </li>
+                            <li class="mr-2">
+                                <a id="analysis" href="" class="tab-link inline-block p-4  border-b-2 rounded-t-lg active hover:text-[#057277] hover:border-[#057277]">
+                                    Analysis Map
+                                </a>
+                            </li>
+                            <li class="mr-2">
+                                <a id="disease_medicine" href="" class="tab-link inline-block p-4  border-b-2 rounded-t-lg active hover:text-[#057277] hover:border-[#057277] ">
+                                    Disease & Medicine
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <label></label>
+                </div>
+                <div id="MedicineNews" class="flex justify-center p-2 animation-bounce bounce-animation">
+                </div>
+                <th:block th:if="${session.loginId}">
+                    <div id="MedicineConnect" class="flex justify-center px-10">
+                        <div class="relative mx-6 my-2 rounded-2xl overflow-hidden w-full px-4 py-6 bg-white shadow-lg dark:bg-gray-700">
+                            <p class="text-3xl mx-2 font-semibold text-black border-b border-gray-200 w-max dark:text-white">
+                                복용약 위험도 분석
+                            </p>
+                            <div class="flex items-end my-6 space-x-2">
+                                <p class="text-l mx-2 font-bold text-gray-700 dark:text-white">
+                                    두 의약품간의 연결선 중 하나라도 변화(위험, 주의)가 있으면 해당 의약품 쌍은 충돌되는 의약품입니다.
+                                </p>
+                            </div>
+                            <div class="flex items-end my-6 space-x-2">
+                                <div id="tooltip"></div>
+                                <div id="cy"></div>
+                            </div>
+                        </div>
+                    </div>
+                </th:block>
+                <div id="RiskAnalysis" class="flex justify-center p-2 animation-bounce-big bounce-animation">
+                </div>
+                <div id="DiseaseList" class="flex justify-center p-2 animation-bounce bounce-animation">
+                </div>
+                <div id="MedicineList" class="flex justify-center p-2 animation-bounce bounce-animation">
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const content = document.getElementById('content');
+
+        // 초기 로드 시 페이드 인
+        setTimeout(() => {
+            content.classList.add('fade-enter-active');
+        }, 0);
+
+        // 페이지를 떠날 때 페이드 아웃
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault(); // 기본 링크 동작 방지
+
+                content.classList.remove('fade-enter-active');
+                content.classList.add('fade-leave-active');
+
+                setTimeout(() => {
+                    window.location.href = link.href; // 페이지 이동
+                }, 600); // 페이드 아웃 시간과 일치
+            });
+        });
+    });
+    function openModal() {
+        document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.add('hidden');
+    }
+
+    function createRiskDiv(disease, medicines, count, color, types) {
+        var medicine = medicines[0].itemName.indexOf('(') > -1 ? medicines[0].itemName.substring(0, medicines[0].itemName.indexOf('(')).trim() : medicines[0].itemName;
+
+        // 새로운 div 요소 생성
+        var customDiv = document.createElement('div');
+        customDiv.className = 'md:w-1/2 riskDiv';
+
+        // 내부 HTML 설정
+        customDiv.innerHTML = `
+        <div id="clickableElement" onclick="openModal()" class="mx-5 relative w-full rounded-2xl overflow-hidden bg-white shadow-lg dark:bg-gray-700">
+            <div class="flex items-center justify-between px-4 py-6 space-x-4">
+                <div class="flex items-center">
+                        <span class="relative p-3 bg-yellow-100 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                            </svg>
+                        </span>
+                    <p id="levelElement" class="p-3 mt-6 text-xl font-bold text-black border-b border-gray-200 md:mt-0 dark:text-white">
+                        ${disease}
+                    </p>
+                </div>
+                <div id="amountElement" class="ml-2 text-sm font-semibold text-gray-700 border-b border-gray-200 dark:text-white">
+                    ${medicine}
+                    <span class="text-xs text-gray-400">
+                            외 ${count - 1}개
+                        </span>
+                </div>
+            </div>
+            <div class="w-full h-3 bg-gray-100">
+                <div class="w-${count}/5 h-full text-xs text-center text-white" style="background-color: ${color};">
+                </div>
+            </div>
+        </div>
+    `;
+        customDiv.addEventListener('click', function() {
+            document.getElementById('diseaseName').textContent = disease;
+            //클릭 시 cardDiv 재설정
+            document.getElementById('CarditemName').innerHTML = '';
+
+            var i = 0;
+            medicines.forEach(function(medicine) {
+                var displayName = medicine.itemName.indexOf('(') > -1 ? medicine.itemName.substring(0, medicine.itemName.indexOf('(')).trim() : medicine.itemName;
+                createCardDiv(displayName, types[i]);
+                i++;
+            });
+        });
+
+        // 특정 div에 추가
+        var targetDiv = document.getElementById('RiskAnalysis');
+        targetDiv.appendChild(customDiv);
+    }
+
+    function createMedicineDiv(medicine, ename) {
+        var displayName = medicine.indexOf('(') > -1 ? medicine.substring(0, medicine.indexOf('(')).trim() : medicine;
+
+        // 새로운 div 요소 생성
+        var customDiv = document.createElement('div');
+        customDiv.className = 'md:w-1/4 medicineDiv';
+
+        // 내부 HTML 설정
+        customDiv.innerHTML = `
+    <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-6 bg-white shadow-lg dark:bg-gray-700">
+        <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+            Medicine
+        </p>
+        <div class="flex items-end my-6 space-x-2">
+            <p class="text-3xl font-bold text-black dark:text-white">
+                ${displayName}
+            </p>
+            <span class="flex items-center text-xl font-bold text-green-500">
+                <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                    </path>
+                </svg>
+                Update
+            </span>
+        </div>
+        <div class="dark:text-white">
+            <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                <p>
+                    ${ename}
+                </p>
+            </div>
+        </div>
+    </div>
+    `;
+
+        // 특정 div에 추가
+        var targetDiv = document.getElementById('MedicineList');
+        targetDiv.appendChild(customDiv);
+    }
+
+    function createDiseaseDiv(disease) {
+
+        // 새로운 div 요소 생성
+        var customDiv = document.createElement('div');
+        customDiv.className = 'md:w-1/4 riskDiv';
+
+        // 내부 HTML 설정
+        customDiv.innerHTML = `
+    <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-6 bg-white shadow-lg dark:bg-gray-700">
+        <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+            Disease
+        </p>
+        <div class="flex items-end my-6 space-x-2">
+            <p class="text-3xl font-bold text-black dark:text-white">
+                ${disease}
+            </p>
+            <span class="flex items-center text-xl font-bold text-green-500">
+                <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                    </path>
+                </svg>
+                Update
+            </span>
+        </div>
+    </div>
+    `;
+
+        // 특정 div에 추가
+        var targetDiv = document.getElementById('DiseaseList');
+        targetDiv.appendChild(customDiv);
+    }
+
+    function createNewsDiv(medicine, title, news, image) {
+        // 특정 div의 자식 요소 개수 확인
+        var targetDiv = document.getElementById('MedicineNews');
+        var currentChildCount = targetDiv.children.length;
+
+        // 자식 요소가 4개 이상이면 추가하지 않음
+        if (currentChildCount >= 4) {
+            return;
+        }
+
+        // 새로운 div 요소 생성
+        var customDiv = document.createElement('div');
+        customDiv.className = 'mx-auto mx-5 bg-white rounded-2xl overflow-hidden shadow-lg w-96 rounded-2xl cursor-pointer';
+
+        // 내부 HTML 설정
+        customDiv.innerHTML = `
+        <div class="h-48 p-3 overflow-hidden">
+            <img src="${image}" alt="News Image" class="w-full h-full object-cover">
+        </div>
+        <div class="p-3">
+            <div class="h-8 text-2xl ml-2 font-bold text-black border-b border-gray-200 md:mt-0 dark:text-white">
+                ${medicine}
+            </div>
+            <div class="h-8 m-3">
+                ${title}
+            </div>
+            <div class="grid grid-cols-3 gap-4 mt-2">
+                <div class="m-3">
+                </div>
+                <div class="col-span-2">
+                </div>
+            </div>
+        </div>
+    `;
+        // 클릭 이벤트 추가
+        customDiv.addEventListener('click', function() {
+            window.location.href = news;
+        });
+
+        // 특정 div에 추가
+        targetDiv.appendChild(customDiv);
+    }
+
+    function createCardDiv(medicine, type) {
+        // 새로운 div 요소 생성
+        var customDiv = document.createElement('div');
+        customDiv.className = 'dark:text-white';
+
+        if(type)
+        {
+            // 내부 HTML 설정
+            customDiv.innerHTML = `
+            <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                <p>
+                    ${medicine}
+                </p>
+                <span class="flex items-center text-l font-bold text-green-500">
+                    <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                        </path>
+                    </svg>
+                    Positive
+                </span>
+            </div>
+        `;
+        }
+        else
+        {
+            // 내부 HTML 설정
+            customDiv.innerHTML = `
+            <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                <p>
+                    ${medicine}
+                </p>
+                <span class="flex items-center text-l font-bold text-red-500">
+                    <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                        </path>
+                    </svg>
+                    Negative
+                </span>
+            </div>
+        `;
+        }
+
+
+        // 특정 div에 추가
+        var targetDiv = document.getElementById('CarditemName');
+        targetDiv.appendChild(customDiv);
+    }
+
+    function openMenu() {
+        document.getElementById("menuBar").style.left = "0px";
+        document.body.style.marginLeft = "250px"; // 본문 내용을 오른쪽으로 이동
+    }
+    function closeMenu() {
+        document.getElementById("menuBar").style.left = "-220px";
+        document.body.style.marginLeft = "0"; // 본문 내용을 원래 위치로 이동
+    }
+
+    $("#dashboard").click(function(event) {
+        event.preventDefault();
+
+        $("#MedicineNews").show();
+        $("#RiskAnalysis").show();
+        $("#MedicineConnect").show();
+        $("#DiseaseList").show();
+        $("#MedicineList").show();
+    });
+
+    $("#news_dangerousness").click(function(event) {
+        event.preventDefault();
+
+        $("#MedicineNews").show();
+        $("#RiskAnalysis").show();
+        $("#MedicineConnect").hide();
+        $("#DiseaseList").hide();
+        $("#MedicineList").hide();
+    });
+
+    $("#analysis").click(function(event) {
+        event.preventDefault();
+        $("#MedicineNews").hide();
+        $("#RiskAnalysis").hide();
+        $("#MedicineConnect").show();
+        $("#DiseaseList").hide();
+        $("#MedicineList").hide();
+    });
+
+    $("#disease_medicine").click(function(event) {
+        event.preventDefault();
+        $("#MedicineNews").hide();
+        $("#RiskAnalysis").hide();
+        $("#MedicineConnect").hide();
+        $("#DiseaseList").show();
+        $("#MedicineList").show();
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const tabs = document.querySelectorAll(".tab-link");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function(event) {
+                event.preventDefault();
+                // 모든 탭에서 active 클래스를 제거
+                tabs.forEach(t => t.classList.remove("active-tab"));
+
+                // 클릭된 탭에 active 클래스 추가
+                tab.classList.add("active-tab");
+            });
+        });
+    });
+
+    $(document).ready(function() {
+        var tableBody = $('#medicine_news_TableBody');
+        tableBody.empty(); // 기존 내용을 비우고 새로운 데이터로 채웁니다.
+
+        // 현재 복용 중인 약품 정보를 서버로부터 로드
+        function loadCurrentMedications() {
+            $.ajax({
+                url: "/member/mypage/medicines",
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    data.forEach(function(med) {
+                        var ItemName = med.itemName;
+                        loadTitles(ItemName);
+                        createMedicineDiv(med.itemName, med.entpName)
+                    });
+                },
+                error: function() {
+                }
+            });
+        }
+        // 네이버 뉴스 검색 결과를 로드
+        async function loadTitles(Item_Name) {
+            var displayName = Item_Name.indexOf('(') > -1 ? Item_Name.substring(0, Item_Name.indexOf('(')).trim() : Item_Name;
+            $.ajax({
+                url: "/search/titles",
+                type: "GET",
+                data: { query: displayName },
+                success: async function(newsList) {
+                    for (const news of newsList) {
+                        var title = news.titleName;
+                        var linkURL = news.linkName;
+                        try {
+                            var imageURL = await sendUrlToServer(linkURL);
+                            createNewsDiv(displayName, title, linkURL, imageURL);
+                        } catch (error) {
+                            console.error("Error retrieving image URL:", error);
+                        }
+                    }
+                },
+                error: function() {
+                    alert("데이터를 불러오는 데 실패했습니다.");
+                }
+            });
+        }
+
+        function loadCurrentDiseases() {
+            $.ajax({
+                url: "/member/mypage/diseases",
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    data.forEach(function(dto) {
+                        if (dto.items.length > 0) {
+                            let riskColor = getRiskColor(dto.matching_count);
+                            console.log(dto.types[0]);
+                            createRiskDiv(dto.diseaseName, dto.items, dto.all_count, riskColor, dto.types);
+                        }
+                    });
+                },
+                error: function() {
+                    console.error("Error fetching data.");
+                }
+            });
+        }
+
+        function loadDiseases() {
+            $.ajax({
+                url: "/member/mypage/Mydiseases",
+                type: "GET",
+                dataType: "json",
+                success: function(data) {
+                    data.forEach(function(data) {
+                        if (data.length > 0) {
+                            createDiseaseDiv(data);
+                        }
+                    });
+                },
+                error: function() {
+                }
+            });
+        }
+        function sendUrlToServer(url) {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: "/crawl-image",
+                    method: 'GET',
+                    data: { query: url },
+                    success: function(data) {
+                        if (data.imageUrl) {
+                            resolve(data.imageUrl);
+                        } else {
+                            console.log('No image found');
+                            resolve(null);
+                        }
+                    },
+                    error: function() {
+                        alert("데이터를 불러오는 데 실패했습니다.");
+                        reject("Error");
+                    }
+                });
+            });
+        }
+
+        function getRiskColor(count) {
+            if (count >= 5) return '#ff0000'; // 빨간색
+            else if (count >= 4) return '#ffa500'; // 오렌지색
+            else if (count >= 3) return '#ffd700'; // 노란색
+            else if (count >= 2) return '#9acd32'; // 연두색
+            else if (count >= 1) return '#008000'; // 초록색
+            else return '#f7fafc';
+        }
+        // 페이지 로드 시 현재 복용 중인 약품 정보 로드
+        loadCurrentMedications();
+        loadCurrentDiseases();
+        loadDiseases();
+    });
+
+    // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+    document.addEventListener("mousemove", function(event) {
+        if (event.clientX < 10) {
+            openMenu();
+        }
+    });
+
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script>
+    $(document).ready(function() {
+        // AJAX 호출로 약물 데이터 로드
+        $.ajax({
+            url: "/member/mypage/medicines2", // 실제 URL로 변경
+            type: "GET",
+            dataType: "json",
+            success: function(medicines) {
+                // 상호작용 확인 및 시각화 함수 호출
+                checkInteractions(medicines);
+            },
+            error: function() {
+
+            }
+        });
+
+        function extractMaterials(materialData, itemName) {
+            var materials = [];
+            var entries = materialData.split('|');
+
+            entries.forEach(function(entry) {
+                var parts = entry.split(':');
+                var isMaterialSection = false;
+
+                parts.forEach(function(part, index) {
+                    if (part.trim() === "성분명") {
+                        isMaterialSection = true;
+                    } else if (isMaterialSection && index > 0) {
+                        var material = part.trim().toLowerCase();
+                        materials.push(material);
+                    }
+                });
+            });
+
+
+            if (itemName) {
+                var regex = /\(([^)]+)\)/g;
+                var matches = itemName.match(regex);
+                if (matches) {
+                    matches.forEach(function(match) {
+                        var content = match.substring(1, match.length - 1); // 괄호 안의 내용 추출
+                        var innerMaterials = content.split(',').map(function(mat) {
+                            return mat.trim().toLowerCase();
+                        });
+                        console.log(innerMaterials);
+                        materials = materials.concat(innerMaterials); // 내용을 materials 배열에 추가
+                    });
+                }
+            }
+
+            return materials;
+        }
+
+
+
+        function checkInteractions(medicines) {
+            var elements = [];
+            var nodes = medicines.map(function(med) {
+                return { data: { id: med.itemName, label: med.itemName } };
+            });
+
+            var edges = [];
+            var interactionsProcessed = 0; // 처리된 상호작용 수를 추적
+            var totalInteractions = medicines.length * (medicines.length - 1); // 모든 방향의 상호작용 수 계산
+
+            // 각 약물 쌍에 대해 상호작용 확인
+            for (var i = 0; i < medicines.length; i++) {
+                for (var j = 0; j < medicines.length; j++) {
+                    if (i !== j) {
+                        (function(med1, med2) { // 클로저 적용
+                            checkInteraction(med1, med2, function(interactionResult, conflictDetails) {
+                                var color;
+                                if (interactionResult === '위험') {
+                                    color = '#E65650';
+                                } else if (interactionResult === '주의') {
+                                    color = '#FFA136';
+                                } else {
+                                    color = '#66CC66';
+                                }
+
+                                var edgeLabel = interactionResult;
+                                console.log(`${med1.itemName} -> ${med2.itemName}: ${conflictDetails}`); // 콘솔에 충돌한 성분 정보 출력
+
+                                edges.push({
+                                    data: {
+                                        id: med1.itemName + '->' + med2.itemName,
+                                        source: med1.itemName,
+                                        target: med2.itemName,
+                                        interaction: edgeLabel,
+                                        color: color,
+                                        conflictDetails: conflictDetails // 충돌한 성분 정보 추가
+                                    }
+                                });
+
+                                interactionsProcessed++;
+
+                                // 모든 상호작용을 확인한 후 시각화
+                                if (interactionsProcessed === totalInteractions) {
+                                    elements = nodes.concat(edges);
+                                    visualizeInteractions(elements, medicines); // 수정된 부분
+                                }
+                            });
+                        })(medicines[i], medicines[j]);
+                    }
+                }
+            }
+        }
+
+        function checkInteraction(med1, med2, callback) {
+            var interactionResult = '안전';
+            var conflictDetails = '';
+
+            // med1과 med2 객체가 정의되어 있는지 확인
+            if (!med1 || !med2 || !med1.itemName || !med2.itemName) {
+                console.error("약물 정보가 올바르지 않습니다.");
+                callback(interactionResult, conflictDetails); // 에러 발생 시 안전으로 반환
+                return;
+            }
+
+            $.ajax({
+                url: "/member/mypage/interaction",
+                type: "GET",
+                data: { medicineId: med1.id },
+                success: function(interactions) {
+                    console.log("Checking interaction between:", med1.itemName, med2.itemName);
+
+                    var med1Materials = med1.materialName ? extractMaterials(med1.materialName, med1.itemName) : [];
+                    var med2Materials = med2.materialName ? extractMaterials(med2.materialName, med2.itemName) : [];
+
+                    console.log("med1 : ", interactions);
+
+                    console.log("med2 : ", med2Materials);
+
+                    interactions.forEach(function(interaction) {
+                        var danger = interaction.drugInteractionDanger ? interaction.drugInteractionDanger.split(',').map(d => d.trim().toLowerCase()) : [];
+                        var warn = interaction.drugInteractionWarn ? interaction.drugInteractionWarn.split(',').map(w => w.trim().toLowerCase()) : [];
+                        var food = interaction.drugFoodInteraction ? interaction.drugFoodInteraction.split(',').map(f => f.trim().toLowerCase()) : [];
+                        var condition = interaction.drugConditionInteraction ? interaction.drugConditionInteraction.split(',').map(c => c.trim().toLowerCase()) : [];
+
+                        var dangerConflict = med2Materials.filter(m => danger.some(d => d.includes(m) || m.includes(d)));
+                        var warnConflict = med2Materials.filter(m => warn.some(w => w.includes(m) || m.includes(w)));
+                        var foodConflict = med2Materials.filter(m => food.some(f => f.includes(m) || m.includes(f)));
+                        var conditionConflict = med2Materials.filter(m => condition.some(c => c.includes(m) || m.includes(c)));
+
+                        if (dangerConflict.length > 0) {
+                            interactionResult = '위험';
+                            conflictDetails = `${med1.itemName} -> ${med2.itemName} : (${dangerConflict.join(', ')})`;
+                        } else if (warnConflict.length > 0 || foodConflict.length > 0 || conditionConflict.length > 0) {
+                            if (interactionResult !== '위험') {
+                                interactionResult = '주의';
+                                conflictDetails = `${med1.itemName} -> ${med2.itemName} : (${warnConflict.join(', ')})`;
+                            }
+                        }
+                    });
+
+                    // 상호작용 확인 후 콜백 호출하여 결과 반환
+                    callback(interactionResult, conflictDetails);
+                },
+                error: function() {
+                    console.error("상호작용 데이터를 불러오는 데 실패했습니다.");
+                    // 에러 발생 시 안전으로 반환
+                    callback('안전', conflictDetails);
+                }
+            });
+        }
+
+        function visualizeInteractions(elements, medicines) {
+            var cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#7FB0B8',
+                            'label': 'data(label)',
+                            'text-valign': 'center',
+                            'color': '#ffffff',
+                            'width': '50px',
+                            'height': '50px',
+                            'font-size': '7px',
+                            'border-width': 2,
+                            'border-color': '#7BA9AD',
+                            'text-outline-width': 0.6,
+                            'text-outline-color': '#5A5A5A'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': 'data(color)',
+                            'target-arrow-color': 'data(color)',
+                            'target-arrow-shape': 'triangle',
+                            'label': '',
+                            'z-index': 9999,
+                            'text-rotation': 'autorotate',
+                            'font-size': '8px',
+                            'font-weight': 'bold',
+                            'color': '#000000',
+                            'text-margin-y': '-5px',
+                            'curve-style': 'bezier',
+                            'control-point-step-size': 20,
+                            'opacity': 0.8
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'concentric',
+                    concentric: function(node) {
+                        return node.degree();
+                    },
+                    levelWidth: function(nodes) {
+                        return 2;
+                    },
+                    padding: 120,  // 패딩을 넓혀서 노드 간의 간격을 넓힘
+                    minNodeSpacing: 70  // 노드 간 최소 간격을 설정하여 겹침 방지
+                },
+                wheelSensitivity: 0.1,
+                minZoom: 0.5,
+                maxZoom: 2
+            });
+
+            var currentMouseTarget = null; // 현재 마우스가 가리키고 있는 요소 저장
+
+            cy.on('mouseover', 'node', function(evt) {
+                var node = evt.target;
+                var connectedEdges = node.connectedEdges();
+                connectedEdges.style('label', function(ele) {
+                    return ele.data('interaction');
+                });
+                connectedEdges.style('line-color', function(ele) {
+                    return ele.data('color');
+                });
+                connectedEdges.style('target-arrow-color', function(ele) {
+                    return ele.data('color');
+                });
+                cy.edges().not(connectedEdges).style({
+                    'line-color': '#ccc', // 연결되지 않은 선들을 회색으로 처리
+                    'target-arrow-color': '#ccc', // 연결되지 않은 화살표 색상을 회색으로 처리
+                    'opacity': 0
+                });
+                currentMouseTarget = node;
+            });
+
+            cy.on('mouseout', 'node', function(evt) {
+                resetEdgeStyles(); // 마우스가 요소에서 벗어난 경우 선 스타일 초기화
+                currentMouseTarget = null; // 현재 마우스 타겟 초기화
+            });
+
+            cy.on('mouseout', function(evt) {
+                if (!currentMouseTarget) { // 마우스 타겟이 없는 경우에만 선 스타일 초기화
+                    resetEdgeStyles();
+                }
+            });
+
+            function resetEdgeStyles() {
+                cy.edges().style('label', ''); // 모든 선들의 라벨 비워두기
+                cy.edges().style({
+                    'line-color': function(ele) {
+                        return ele.data('color');
+                    }, // 모든 선들의 색상을 초기화
+                    'target-arrow-color': function(ele) {
+                        return ele.data('color');
+                    }, // 화살표 색상 초기화
+                    'opacity': 0.8 // 투명도 초기값으로 설정
+                });
+            }
+
+            // 엣지에 툴팁 추가 (기존 코드 유지)
+            cy.on('mouseover', 'edge', function(evt) {
+                var edge = evt.target;
+                var tooltip = edge.data('conflictDetails');
+                if (tooltip) {
+                    $('#tooltip').show().text(tooltip);
+                }
+            });
+
+            cy.on('mouseout', 'edge', function(evt) {
+                $('#tooltip').hide();
+            });
+
+            cy.fit();
+        }
+    });
+</script>
+
+</body>
+</html>

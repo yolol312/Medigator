@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Medigator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            transition: margin-left 0.5s; /* 본문 이동 효과 추가 */
+        }
+        .menu-bar {
+            width: 250px; /* 메뉴 바의 기본 너비를 지정 */
+            height: 100%;
+            position: fixed;
+            z-index: 1;
+            top: 0;
+            left: -220px; /* 메뉴 바를 화면 왼쪽 바깥으로 이동시켜 숨깁니다 */
+            background-color: white;
+            overflow-x: hidden;
+            transition: left 0.5s; /* 'left' 속성을 이용한 애니메이션 적용 */
+            padding-top: 60px;
+        }
+        /* 페이드 인 애니메이션 */
+        #content {
+            opacity: 0;
+            transition: opacity 0.6s;
+        }
+        #content.fade-enter-active {
+            opacity: 1;
+        }
+        #content.fade-leave-active {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+<div id="content" class="relative h-screen w-full overflow-hidden bg-[#438D8B]" style="background-image: url('/background2.png'); background-size: cover; background-position: center;">
+    <div id="menuBar" onmouseleave="closeMenu()" class="menu-bar h-full dark:bg-gray-700" style="background-color: #057277;">
+        <div class="flex items-center justify-start pt-6 ml-8">
+            <p class="text-xl text-white font-bold dark:text-white">
+                Menu
+            </p>
+        </div>
+        <nav class="mt-6">
+            <div>
+                <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 dark:text-white" href="#" style="border-left-color: #eaf8f9;">
+                    <span class="text-left">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1472 992v480q0 26-19 45t-45 19h-384v-384h-256v384h-384q-26 0-45-19t-19-45v-480q0-1 .5-3t.5-3l575-474 575 474q1 2 1 6zm223-69l-62 74q-8 9-21 11h-3q-13 0-21-7l-692-577-692 577q-12 8-24 7-13-2-21-11l-62-74q-8-10-7-23.5t11-21.5l719-599q32-26 76-26t76 26l244 204v-195q0-14 9-23t23-9h192q14 0 23 9t9 23v408l219 182q10 8 11 21.5t-7 23.5z">
+                            </path>
+                        </svg>
+                    </span>
+                    <span class="mx-2 text-sm font-normal">
+                        Home
+                    </span>
+                </a>
+                <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Single">
+                    <span class="text-left">
+                        <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                          <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    <span class="mx-2 text-sm font-normal">
+                        Medicine Search
+                    </span>
+                </a>
+            </div>
+        </nav>
+    </div>
+    <div class="absolute inset-0 bg-black opacity-25">
+    </div>
+    <header class="z-40 flex items-center justify-between w-full h-16 mt-5">
+        <div class="block ml-6 lg:hidden">
+            <button class="flex items-center p-2 text-gray-500 bg-white rounded-full shadow text-md">
+                <svg width="20" height="20" class="text-gray-400" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1664 1344v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="relative z-20 flex flex-col justify-end h-full px-3 md:w-full">
+            <div class="relative flex items-center justify-end w-full p-1 space-x-4">
+                <a href="/member/login" class="no-underline">
+                    <button type="button" class="px-4 py-3 flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white text-xl w-full transition ease-in duration-200 text-center font-bold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="width: 150px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
+                        </svg>
+                        Login
+                    </button>
+                </a>
+            </div>
+        </div>
+    </header>
+    <div class="container relative z-10 flex items-center px-6 py-32 ml-12 md:px-12 xl:py-40">
+        <div class="relative z-10 flex flex-col items-start lg:w-3/5 xl:w-full">
+            <h1 class="mt-4 text-6xl font-bold leading-tight text-white sm:text-7xl">
+                It will be a navigation for
+                <br/>
+                your healthy use of medicine.
+                <br/>
+                <br/>
+                by Medigator
+            </h1>
+            <a href="/member/Single" class="block px-4 py-3 mt-10 text-xl font-bold text-white uppercase bg-indigo-600 rounded-2xl hover:bg-gray-100">
+                Start
+            </a>
+        </div>
+    </div>
+</div>
+<script>
+
+    function openMenu() {
+        document.getElementById("menuBar").style.left = "0px";
+        document.body.style.marginLeft = "250px"; // 본문 내용을 오른쪽으로 이동
+    }
+
+    function closeMenu() {
+        document.getElementById("menuBar").style.left = "-220px";
+        document.body.style.marginLeft = "0"; // 본문 내용을 원래 위치로 이동
+    }
+
+    // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+    document.addEventListener("mousemove", function(event) {
+        if (event.clientX < 10) {
+            openMenu();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const content = document.getElementById('content');
+
+        // 초기 로드 시 페이드 인
+        setTimeout(() => {
+            content.classList.add('fade-enter-active');
+        }, 0);
+
+        // 페이지를 떠날 때 페이드 아웃
+        const links = document.querySelectorAll('.nav-link');
+        links.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault(); // 기본 링크 동작 방지
+
+                content.classList.remove('fade-enter-active');
+                content.classList.add('fade-leave-active');
+
+                setTimeout(() => {
+                    window.location.href = link.href; // 페이지 이동
+                }, 600); // 페이드 아웃 시간과 일치
+            });
+        });
+    });
+
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+</body>
+</html>

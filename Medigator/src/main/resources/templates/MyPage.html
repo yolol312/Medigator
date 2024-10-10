@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>My Page</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      transition: margin-left 0.5s; /* 본문 이동 효과 추가 */
+    }
+    label {
+      font-weight: bold;
+      color: #555555;
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="number"] {
+      width: calc(100% - 24px);
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    input[type="medicine"] {
+      width: calc(50% - 24px);
+      padding: 10px;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+
+    #MedicineList {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px; /* 요소들 사이의 간격 설정 */
+    }
+    ul {
+      padding-left: 20px;
+      list-style: none; /* 리스트 스타일 제거 */
+    }
+
+    li::marker {
+      content: " - "; /* 매번 추가될 마커 */
+      color: #000000; /* 마커 색상 */
+    }
+
+    ul {
+      margin-top: 5px; /* 각 리스트 사이에 여백 추가 */
+    }
+
+    ul li {
+      font-size: 18px; /* 리스트 아이템 폰트 크기 증가 */
+    }
+
+    #myDrugList ul {
+      width: 100%; /* 내부 리스트가 부모 요소의 넓이를 가질 수 있도록 설정합니다. */
+    }
+    .menu-bar {
+      width: 250px; /* 메뉴 바의 기본 너비를 지정 */
+      height: 100%;
+      position: fixed;
+      z-index: 1;
+      top: 0;
+      left: -220px; /* 메뉴 바를 화면 왼쪽 바깥으로 이동시켜 숨깁니다 */
+      background-color: white;
+      overflow-x: hidden;
+      transition: left 0.5s; /* 'left' 속성을 이용한 애니메이션 적용 */
+      padding-top: 60px;
+    }
+    .mypageDiv {
+      flex: 0 1 calc(50% - 20px); /* 여백을 고려한 너비 설정 */
+      box-sizing: border-box; /* 패딩과 테두리를 너비 계산에 포함 */
+    }
+    .bounce-animation:hover {
+      animation: none; /* 커서를 가져다댔을 때 애니메이션 일시 정지 */
+    }
+    .back-link i {
+      margin-right: 5px; /* 아이콘과 텍스트 사이 간격 */
+    }
+    /* 페이드 인 애니메이션 */
+    #content {
+      opacity: 0;
+      transition: opacity 0.6s;
+    }
+    #content.fade-enter-active {
+      opacity: 1;
+    }
+    #content.fade-leave-active {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body style="background-color: #eaf8f9;">
+<main id="content" class="relative w-full overflow-hidden dark:bg-gray-800">
+  <header class="z-40 flex items-center justify-between w-full h-16">
+    <div class="relative z-20 flex flex-col justify-end h-full px-3 md:w-full">
+      <div class="relative flex items-center justify-end w-full p-1 space-x-4">
+        <th:block th:if="${session.loginId}">
+          <a href="/member/logout" class="no-underline">
+            <button type="button" class="py-2 px-4 flex justify-center items-center hover:bg-red-700 focus:ring-red-500 focus:ring-offset-red-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="background-color: #C94F4F; width: 110px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+              </svg>
+              Logout
+            </button>
+          </a>
+        </th:block>
+        <th:block th:unless="${session.loginId}">
+          <a href="/member/login" class="no-underline">
+            <button type="button" class="py-2 px-4 flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="width: 100px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
+              </svg>
+              Login
+            </button>
+          </a>
+        </th:block>
+      </div>
+    </div>
+  </header>
+  <div class="ml-36 relative rounded-2xl overflow-hidden flex justify-start">
+    <h1 class="mb-1 text-3xl font-semibold text-gray-500 dark:text-white">
+      현재 가지고 있는 질병 혹은 복용 중인 약물을 등록해주세요
+    </h1>
+  </div>
+  <div class="ml-36 mb-10 relative rounded-2xl overflow-hidden flex justify-start">
+    <h2 class="text-gray-400 text-md">
+      &#x27;Medigator&#x27;는 등록해주신 정보를 통해 맞춤형으로 정보를 제공합니다!
+    </h2>
+  </div>
+  <div class="flex items-start justify-between overflow-hidden">
+    <div id="menuBar" onmouseleave="closeMenu()" class="menu-bar rounded-tr-2xl rounded-br-2xl overflow-hidden h-full dark:bg-gray-700" style="background-color: #057277;">
+      <div class="flex items-center justify-start pt-6 ml-8">
+        <p class="text-xl text-white font-bold dark:text-white">
+          Menu
+        </p>
+      </div>
+      <nav class="mt-6">
+        <div>
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 dark:text-white hover:text-gray-800" href="/index" style="border-left-color: #057277;">
+                                <span class="text-left">
+                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1472 992v480q0 26-19 45t-45 19h-384v-384h-256v384h-384q-26 0-45-19t-19-45v-480q0-1 .5-3t.5-3l575-474 575 474q1 2 1 6zm223-69l-62 74q-8 9-21 11h-3q-13 0-21-7l-692-577-692 577q-12 8-24 7-13-2-21-11l-62-74q-8-10-7-23.5t11-21.5l719-599q32-26 76-26t76 26l244 204v-195q0-14 9-23t23-9h192q14 0 23 9t9 23v408l219 182q10 8 11 21.5t-7 23.5z">
+                                        </path>
+                                    </svg>
+                                </span>
+            <span class="mx-2 text-sm font-normal">
+                                    Home
+                                </span>
+          </a>
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/MyPage" style="border-left-color: #eaf8f9;">
+                                <span class="text-left">
+                                    <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                      <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+            <span class="mx-2 text-sm font-normal">
+                                    My Page
+                                </span>
+          </a>
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Single">
+                                <span class="text-left">
+                                    <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                      <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+            <span class="mx-2 text-sm font-normal">
+                                    Medicine Search
+                                </span>
+          </a>
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Analysis">
+                                <span class="text-left">
+                                    <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                        <path fill-rule="evenodd" d="M16.098 2.598a3.75 3.75 0 1 1 3.622 6.275l-1.72.46V12a.75.75 0 0 1-.22.53l-.75.75a.75.75 0 0 1-1.06 0l-.97-.97-7.94 7.94a2.56 2.56 0 0 1-1.81.75 1.06 1.06 0 0 0-.75.31l-.97.97a.75.75 0 0 1-1.06 0l-.75-.75a.75.75 0 0 1 0-1.06l.97-.97a1.06 1.06 0 0 0 .31-.75c0-.68.27-1.33.75-1.81L11.69 9l-.97-.97a.75.75 0 0 1 0-1.06l.75-.75A.75.75 0 0 1 12 6h2.666l.461-1.72c.165-.617.49-1.2.971-1.682Zm-3.348 7.463L4.81 18a1.06 1.06 0 0 0-.31.75c0 .318-.06.63-.172.922a2.56 2.56 0 0 1 .922-.172c.281 0 .551-.112.75-.31l7.94-7.94-1.19-1.19Z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+            <span class="mx-2 text-sm font-normal">
+                                    Medicine Analysis
+                                </span>
+          </a>
+        </div>
+      </nav>
+    </div>
+    <div class="mr-10 mt-8 mb-10 relative rounded-2xl overflow-hidden bg-white shadow-lg dark:bg-gray-700 flex justify-center p-2" style="width:2200px; left:110px;">
+      <div class="mx-5 mt-2 w-full h-full">
+        <form action="/member/MyPage" method="post">
+          <label for="name" class="mt-3 mr-1 border-b border-gray-200 inline-block">이름</label>
+          <input type="text" id="name" name="name">
+
+          <div class="mb-3 flex items-center">
+            <label for="sex" class="mr-1 border-b border-gray-200 inline-block">성별</label>
+            <label></label>
+          </div>
+          <div class="mb-3">
+            <div class="inline-flex items-center">
+              <input type="radio" id="male" name="sex" value="male" class="mr-1">
+              <label for="male" class="mr-3">남성</label>
+              <input type="radio" id="female" name="sex" value="female" class="mr-1">
+              <label for="female">여성</label>
+            </div>
+          </div>
+
+          <label for="age" class="mt-3 mr-1 border-b border-gray-200 inline-block">나이</label>
+          <input type="number" id="age" name="age">
+
+          <div class="disease-container">
+            <label for="disease" class="mr-1 border-b border-gray-200 inline-block">질병 등록</label>
+            <input type="text" id="disease1" name="disease1" placeholder="질병이 있다면 입력해주세요.">
+            <input type="text" id="disease2" name="disease2" placeholder="질병이 있다면 입력해주세요.">
+            <input type="text" id="disease3" name="disease3" placeholder="질병이 있다면 입력해주세요.">
+          </div>
+          <button id="editButton" class="w-full mb-5 px-3 py-2 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277;">저장</button>
+          <div class="disease-container">
+            <label for="disease" class="mr-1 border-b border-gray-200 inline-block">질병 삭제</label>
+            <input type="text" id="disease4" name="disease1" placeholder="삭제할 질병을 입력해주세요.">
+          </div>
+          <button id="deleteButton" class="w-full mb-5 px-3 py-2 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #C94F4F;">삭제</button>
+        </form>
+      </div>
+    </div>
+    <div class="ml-20 mt-8 mb-3 flex justify-center items-start flex-wrap">
+      <div class="relative rounded-2xl overflow-hidden bg-white shadow-lg dark:bg-gray-700 flex justify-center" style="width:800px;">
+        <div class="ml-7 w-full">
+          <form id="searchForm">
+            <div class="flex items-center">
+              <label for="drugList" class="mt-5 mr-1 border-b border-gray-200 inline-block">복용 중인 약물</label>
+              <label></label>
+            </div>
+            <div class="inline-flex items-center">
+              <input type="medicine" id="entpName" class="mr-3" placeholder="회사명으로 검색" style="width:270px">
+              <input type="medicine" id="itemName" class="mr-3" placeholder="약품명으로 검색" style="width:270px">
+              <button type="submit" class="flex justify-center items-center block mb-3 px-3 py-2 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277; width:181px">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+                검색
+              </button>
+            </div>
+          </form>
+          <div class="inline-flex items-center mb-3">
+            <button id="prevPage"class="flex justify-center items-center block px-3 py-2 mr-3 mt-3 text-l font-bold text-white uppercase rounded-2xl w-1/2 hover:bg-gray-100" style="background-color: #057277; width:367px">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5" />
+              </svg>
+              이전 페이지
+            </button>
+            <button id="nextPage" class="flex justify-center items-center block px-3 py-2 mr-3 mt-3 text-l font-bold text-white uppercase rounded-2xl w-1/2 hover:bg-gray-100" style="background-color: #057277; width:367px">
+              다음 페이지
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="MedicineList" class="mt-3 flex justify-center p-2">
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.7.1.js"
+        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const content = document.getElementById('content');
+
+    // 초기 로드 시 페이드 인
+    setTimeout(() => {
+      content.classList.add('fade-enter-active');
+    }, 0);
+
+    // 페이지를 떠날 때 페이드 아웃
+    const links = document.querySelectorAll('.nav-link');
+    links.forEach(link => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault(); // 기본 링크 동작 방지
+
+        content.classList.remove('fade-enter-active');
+        content.classList.add('fade-leave-active');
+
+        setTimeout(() => {
+          window.location.href = link.href; // 페이지 이동
+        }, 600); // 페이드 아웃 시간과 일치
+      });
+    });
+  });
+
+  let currentPageNo = 1; // 현재 페이지 번호
+  const numOfRows = 3; // 페이지 당 표시할 항목 수
+  var items = null;
+
+  function openMenu() {
+    document.getElementById("menuBar").style.left = "0px";
+    document.body.style.marginLeft = "250px"; // 본문 내용을 오른쪽으로 이동
+  }
+
+  function closeMenu() {
+    document.getElementById("menuBar").style.left = "-220px";
+    document.body.style.marginLeft = "0"; // 본문 내용을 원래 위치로 이동
+  }
+
+  function updatePaginationButtons(totalCount) {
+    $("#prevPage").toggle(currentPageNo > 1);
+    $("#nextPage").toggle(currentPageNo < Math.ceil(totalCount / numOfRows));
+  }
+
+  // 검색 폼 제출 이벤트
+  $("#searchForm").submit(function(event) {
+    console.log("searchForm");
+    event.preventDefault();
+    currentPageNo = 1;
+    searchDrugs(currentPageNo);
+  });
+
+  // 이전 페이지 버튼 클릭 이벤트
+  $("#prevPage").click(function(event) {
+    console.log("prevPage");
+    event.preventDefault();
+    if (currentPageNo > 1) {
+      currentPageNo--;
+      searchDrugs(currentPageNo);
+    }
+  });
+
+  // 다음 페이지 버튼 클릭 이벤트
+  $("#nextPage").click(function(event) {
+    console.log("nextPage");
+    event.preventDefault();
+    currentPageNo++;
+    searchDrugs(currentPageNo);
+  });
+
+  function searchDrugs(pageNo) {
+    const entpName = $("#entpName").val();
+    const itemName = $("#itemName").val();
+
+    $.ajax({
+      method: "GET",
+      url: "http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList",
+      data: {
+        serviceKey: "b+gZfgfN+HH+duTxDk+pgGHcRLu3E1RxHx/PjuL4xPp9OeHZIVmYTA0XID3lNEQXiACvRAy+80kEc6yqJW+LBA==",
+        entpName: entpName,
+        itemName: itemName,
+        pageNo: pageNo,
+        numOfRows: numOfRows,
+        type: "json"
+      },
+      dataType: "json"
+    }).done(function (response) {
+      items = response.body.items;
+      document.getElementById('MedicineList').innerHTML = '';
+
+      $.each(items, function (i, item) {
+        var entpName = item.entpName;
+        var itemName = item.itemName;
+        var atpnQesitm = item.atpnQesitm;
+        var efcyQesitm = item.efcyQesitm;
+        var useMethodQesitm = item.useMethodQesitm;
+        var intrcQesitm = item.intrcQesitm;
+
+        loadCurrentMedications(itemName)
+                .then(result => {
+                  if (result) {
+                    createMedicineDiv(true, itemName, entpName, atpnQesitm, efcyQesitm, useMethodQesitm, intrcQesitm);
+                  } else {
+                    createMedicineDiv(false, itemName, entpName, atpnQesitm, efcyQesitm, useMethodQesitm, intrcQesitm);
+                  }
+                })
+                .catch(error => {
+                  console.error(error);
+                });
+      });
+      const totalCount = response.response.body.totalCount;
+      updatePaginationButtons(totalCount);
+    });
+  }
+
+  // 현재 복용 중인 약품 정보를 서버로부터 로드
+  function loadCurrentMedications(targetName) {
+    return new Promise((resolve, reject) => {
+      $.ajax({
+        url: "/member/mypage/medicines",
+        type: "GET",
+        dataType: "json",
+        success: function(data) {
+          let found = true;
+          data.forEach(function(med) {
+            if (targetName === med.itemName) {
+              found = false;
+            }
+          });
+          if (found) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        },
+        error: function() {
+          alert("로그인을 해주세요.");
+          window.location.href = "/member/login";
+        }
+      });
+    });
+  }
+
+  function createMedicineDiv(type, itemName, entpName, atpnQesitm, efcyQesitm, useMethodQesitm, intrcQesitm) {
+    var displayName = itemName.indexOf('(') > -1 ? itemName.substring(0, itemName.indexOf('(')).trim() : itemName;
+
+    // 새로운 div 요소 생성
+    var customDiv = document.createElement('div');
+    customDiv.className = 'md:w-full mr-11 animate-pulse bounce-animation';
+    customDiv.style.width = '800px';
+
+    if(type){
+      // 내부 HTML 설정
+      customDiv.innerHTML = `
+        <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-2 bg-white shadow-lg dark:bg-gray-700">
+            <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+                Medicine
+            </p>
+            <div class="flex items-end my-2">
+                <p class="text-2xl font-bold text-black dark:text-white">
+                    ${displayName}
+                </p>
+                <span class="flex items-center ml-3 text-xl font-bold text-green-500">
+                    <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                        </path>
+                    </svg>
+                    Search
+                </span>
+                <button
+                  class="addButton flex justify-center items-right block px-3 py-2 ml-10 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100"
+                  style="background-color: #057277FF; width: 200px;"
+                  data-entp-name="${entpName}"
+                  data-item-name="${itemName}"
+                  data-efcy-qesitm="${efcyQesitm}"
+                  data-atpn-qesitm="${atpnQesitm}"
+                  data-use-method-qesitm="${useMethodQesitm}"
+                  data-intrc-qesitm="${intrcQesitm}">
+                  추가
+                </button>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        제조사 : ${entpName}
+                    </p>
+                </div>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        효능 : ${efcyQesitm}
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    }
+    else{
+      // 내부 HTML 설정
+      customDiv.innerHTML = `
+        <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-2 bg-white shadow-lg dark:bg-gray-700">
+            <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+                Medicine
+            </p>
+            <div class="flex items-end my-2">
+                <p class="text-2xl font-bold text-black dark:text-white">
+                    ${displayName}
+                </p>
+                <span class="flex items-center ml-3 text-xl font-bold text-green-500">
+                    <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                        </path>
+                    </svg>
+                    Search
+                </span>
+                <button
+                  class="addButton flex justify-center items-right block px-3 py-2 ml-10 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100"
+                  style="background-color: #C94F4F; width: 200px;"
+                  data-entp-name="${entpName}"
+                  data-item-name="${itemName}"
+                  data-efcy-qesitm="${efcyQesitm}"
+                  data-atpn-qesitm="${atpnQesitm}"
+                  data-use-method-qesitm="${useMethodQesitm}"
+                  data-intrc-qesitm="${intrcQesitm}">
+                  삭제
+                </button>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        제조사 : ${entpName}
+                    </p>
+                </div>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        효능 : ${efcyQesitm}
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    }
+    // 특정 div에 추가
+    var targetDiv = document.getElementById('MedicineList');
+    targetDiv.appendChild(customDiv);
+  }
+
+  // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+  document.addEventListener("mousemove", function(event) {
+    if (event.clientX < 10) {
+      openMenu();
+    }
+  });
+</script>
+
+<script>
+  $(document).ready(function() {
+    searchDrugs(currentPageNo);
+    // 마이페이지 정보 로딩
+    $.ajax({
+      url: "/member/mypage/details",
+      type: "GET",
+      success: function (data) {
+        $('#name').val(data.name);
+        $('#age').val(data.age);
+        if (data.sex) { // 성별 데이터가 있는 경우에만 설정
+          $('input[name="sex"][value="' + data.sex + '"]').prop('checked', true);
+        }
+      },
+      error: function () {
+
+      }
+    });
+  });
+</script>
+
+<script>
+  // 수정 폼 제출 이벤트
+  $(document).ready(function() {
+    $("#editButton").click(function (event) {
+      event.preventDefault();
+      var formData = {
+        name: $("#name").val(),
+        sex: $("input[name='sex']:checked").val(),
+        age: parseInt($("#age").val(), 10),
+      };
+
+      var formDisease = {
+        disease1: $("#disease1").val(),
+        disease2: $("#disease2").val(),
+        disease3: $("#disease3").val(),
+      };
+
+      $.ajax({
+        method: "POST",
+        url: "/member/updateMyPage",
+        data: JSON.stringify(formData),
+        contentType: "application/json",
+        dataType: "json"
+      }).done(function (response) {
+        if (response.status === "success") {
+        } else {
+          alert(response.message);  // 에러 메시지 표시
+        }
+      }).fail(function (jqXHR, textStatus, errorThrown) {
+        console.error("Request failed: " + textStatus + ", " + errorThrown);
+        console.error("Response text:", jqXHR.responseText); // 서버 응답 전체 출력
+        alert("통신 중 문제가 발생했습니다.");
+      });
+
+      $.ajax({
+        method: "POST",
+        url: "/member/updateMyDisease",
+        data: JSON.stringify(formDisease),
+        contentType: "application/json",
+        dataType: "json"
+      }).done(function (response) {
+        if (response.status === "success") {
+          alert(response.message);  // "저장되었습니다."
+        } else {
+          alert(response.message);  // 에러 메시지 표시
+        }
+      }).fail(function (jqXHR, textStatus, errorThrown) {
+        console.error("Request failed: " + textStatus + ", " + errorThrown);
+        console.error("Response text:", jqXHR.responseText); // 서버 응답 전체 출력
+        alert("중복된 질병이 있습니다.");
+      });
+    });
+    $("#deleteButton").click(function (event) {
+      event.preventDefault();
+
+      var formDisease = $("#disease4").val();
+
+      $.ajax({
+        method: "POST",
+        url: "/member/deleteMyDisease",
+        data: JSON.stringify(formDisease),
+        contentType: "application/json",
+        dataType: "json"
+      }).done(function (response) {
+        if (response.status === "success") {
+          alert(response.message);  // 에러 메시지 표시
+        } else {
+          alert(response.message);  // 에러 메시지 표시
+        }
+      }).fail(function (jqXHR, textStatus, errorThrown) {
+        console.error("Request failed: " + textStatus + ", " + errorThrown);
+        console.error("Response text:", jqXHR.responseText); // 서버 응답 전체 출력
+        alert("해당 질병이 존재하지 않습니다.");
+      });
+    });
+  });
+</script>
+
+<script>
+  $(document).on("click", ".addButton", function() {
+
+    var items = null;
+
+    var drugData = {
+      itemName: $(this).data('item-name'),
+      entpName: $(this).data('entp-name'),
+      efcyQesitm: $(this).data('efcy-qesitm'),
+      atpnQesitm: $(this).data('atpn-qesitm'),
+      useMethodQesitm: $(this).data('use-method-qesitm'),
+      intrcQesitm: $(this).data('intrc-qesitm')
+    };
+
+    var medicineName = drugData.itemName;
+
+    loadCurrentMedications(drugData.itemName)
+            .then(result => {
+              if (result) {
+                $.ajax({
+                  method: "POST",
+                  url: "/member/addMedicine",
+                  contentType: "application/json",
+                  data: JSON.stringify(drugData),
+                  success: function (response) {
+                    alert("약물이 추가되었습니다.");
+                    // OpenAI API 요청 시작
+                    var originalText = drugData.intrcQesitm;
+                    $.ajax({
+                      url: '/api/summarize',
+                      type: 'POST',
+                      contentType: 'application/json',
+                      data: JSON.stringify({text: originalText, itemName: medicineName}),
+                      success: function (summaryResponse) {
+                        console.log('Summarization result:', summaryResponse);
+                      },
+                      error: function (xhr, status, error) {
+                        console.error('Error occurred in summarization:', error);
+                      }
+                    });
+
+                    $.ajax({
+                      method: "GET",
+                      url: "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04",
+                      data: {
+                        serviceKey: "pTNRi22KX1NRbOD7ZWsTngtCRegEP2WII0o+NvLPeE3/tpJ+aUtv7Dhf2pR1iv4AjLolK/IyGeJObgLGREO5Dg==",
+                        item_name: drugData.itemName,
+                        entp_name: drugData.entpName,
+                        type: "json"
+                      },
+                      dataType: "json"
+                    }).done(function (response) {
+                      items = response.body.items;
+                      if (items.length > 0) {
+                        var materialName = items[0].MATERIAL_NAME; // MATERIAL_NAME 추출
+                        console.log("MATERIAL_NAME:", materialName);
+                        // MATERIAL_NAME 서버로 전송
+                        $.ajax({
+                          method: "POST",
+                          url: "/member/saveMaterialName",
+                          contentType: "application/json",
+                          data: JSON.stringify({
+                            materialName: materialName,
+                            itemName: drugData.itemName
+                          }),
+                          success: function (response) {
+                            console.log("MATERIAL_NAME 저장되었습니다.");
+                          },
+                          error: function (xhr, status, error) {
+                            console.log("Error occurred in saving MATERIAL_NAME:", error);
+                          }
+                        });
+                      }
+                    })
+                            .catch(error => {
+                              console.error(error);
+                            });
+                    searchDrugs(currentPageNo)
+                  }
+                });
+              } else {
+
+                $.ajax({
+                  url: '/member/mypage/medicine/' + medicineName,
+                  type: 'DELETE',
+                  data: JSON.stringify({itemName: itemName}),
+                  contentType: 'application/json',
+                  success: function (response) {
+                    alert("약물이 삭제되었습니다.");
+                    searchDrugs(currentPageNo);
+                  },
+                  error: function (xhr, status, error) {
+                    alert("약물 삭제에 실패했습니다: " + error);
+                  }
+                });
+              }
+            })
+  });
+
+  // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+  document.addEventListener("mousemove", function(event) {
+    if (event.clientX < 10) {
+      openMenu();
+    }
+  });
+</script>
+</div>
+</body>
+</html>

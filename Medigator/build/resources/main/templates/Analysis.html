@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Medicine Analysis</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome for icons -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      transition: margin-left 0.5s; /* 본문 이동 효과 추가 */
+    }
+    label {
+      font-weight: bold;
+      color: #555555;
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="number"] {
+      width: calc(100% - 24px);
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    input[type="medicine"] {
+      width: calc(50% - 24px);
+      padding: 10px;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    .chart-container {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+    }
+    .chart {
+      position: relative;
+      width: 100%;
+      height: 350px; /* 차트 높이 고정 */
+    }
+    .result-box i {
+      font-size: 24px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    #MedicineList {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px; /* 요소들 사이의 간격 설정 */
+    }
+    #myDrugList ul {
+      width: 100%; /* 내부 리스트가 부모 요소의 넓이를 가질 수 있도록 설정합니다. */
+    }
+    .menu-bar {
+      width: 250px; /* 메뉴 바의 기본 너비를 지정 */
+      height: 100%;
+      position: fixed;
+      z-index: 1;
+      top: 0;
+      left: -220px; /* 메뉴 바를 화면 왼쪽 바깥으로 이동시켜 숨깁니다 */
+      background-color: white;
+      overflow-x: hidden;
+      transition: left 0.5s; /* 'left' 속성을 이용한 애니메이션 적용 */
+      padding-top: 60px;
+    }
+    .bounce-animation:hover {
+      animation: none; /* 커서를 가져다댔을 때 애니메이션 일시 정지 */
+    }
+    /* 페이드 인 애니메이션 */
+    #content {
+      opacity: 0;
+      transition: opacity 0.6s;
+    }
+    #content.fade-enter-active {
+      opacity: 1;
+    }
+    #content.fade-leave-active {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body th:data-login-id="${session.loginId}" style="background-color: #eaf8f9;">
+<main id="content" class="relative w-full overflow-hidden dark:bg-gray-800">
+  <header class="z-40 flex items-center justify-between w-full h-16">
+    <div class="relative z-20 flex flex-col justify-end h-full px-3 md:w-full">
+      <div class="relative flex items-center justify-end w-full p-1 space-x-4">
+        <th:block th:if="${session.loginId}">
+          <a href="/member/logout" class="no-underline">
+            <button type="button" class="py-2 px-4 flex justify-center items-center hover:bg-red-700 focus:ring-red-500 focus:ring-offset-red-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="background-color: #C94F4F; width: 110px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+              </svg>
+              Logout
+            </button>
+          </a>
+        </th:block>
+        <th:block th:unless="${session.loginId}">
+          <a href="/member/login" class="no-underline">
+            <button type="button" class="py-2 px-4 flex justify-center items-center bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-indigo-200 text-white w-full transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2  rounded-lg" style="width: 100px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H2.25" />
+              </svg>
+              Login
+            </button>
+          </a>
+        </th:block>
+      </div>
+    </div>
+  </header>
+  <div class="ml-10 mb-3 flex justify-center items-start flex-wrap">
+    <div class="relative rounded-2xl overflow-hidden flex justify-center" style="width:1065px;">
+      <div class="ml-7 w-full">
+        <h1 class="mb-1 text-3xl font-semibold text-gray-500 dark:text-white">
+          원하는 약물을 검색하세요 &#40;약물간의 상호작용 검사&#41;
+        </h1>
+        <h2 class="text-gray-400 text-md">
+          &#x27;분석하기&#x27;를 누른다면 당신이 복용 중인 약물과의 상호작용 검사 결과를 제공합니다!
+        </h2>
+      </div>
+    </div>
+  </div>
+  <div id="menuBar" onmouseleave="closeMenu()" class="menu-bar rounded-tr-2xl rounded-br-2xl overflow-hidden h-full dark:bg-gray-700" style="background-color: #057277;">
+    <div class="flex items-center justify-start pt-6 ml-8">
+      <p class="text-xl text-white font-bold dark:text-white">
+        Menu
+      </p>
+    </div>
+    <nav class="mt-6">
+      <div>
+        <th:block th:if="${session.loginId}">
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 dark:text-white" href="/index" style="border-left-color: #057277;">
+                              <span class="text-left">
+                                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M1472 992v480q0 26-19 45t-45 19h-384v-384h-256v384h-384q-26 0-45-19t-19-45v-480q0-1 .5-3t.5-3l575-474 575 474q1 2 1 6zm223-69l-62 74q-8 9-21 11h-3q-13 0-21-7l-692-577-692 577q-12 8-24 7-13-2-21-11l-62-74q-8-10-7-23.5t11-21.5l719-599q32-26 76-26t76 26l244 204v-195q0-14 9-23t23-9h192q14 0 23 9t9 23v408l219 182q10 8 11 21.5t-7 23.5z">
+                                      </path>
+                                  </svg>
+                              </span>
+            <span class="mx-2 text-sm font-normal">
+                                  Home
+                              </span>
+          </a>
+        </th:block>
+        <th:block th:unless="${session.loginId}">
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 dark:text-white" href="/" style="border-left-color: #057277;">
+                                <span class="text-left">
+                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1472 992v480q0 26-19 45t-45 19h-384v-384h-256v384h-384q-26 0-45-19t-19-45v-480q0-1 .5-3t.5-3l575-474 575 474q1 2 1 6zm223-69l-62 74q-8 9-21 11h-3q-13 0-21-7l-692-577-692 577q-12 8-24 7-13-2-21-11l-62-74q-8-10-7-23.5t11-21.5l719-599q32-26 76-26t76 26l244 204v-195q0-14 9-23t23-9h192q14 0 23 9t9 23v408l219 182q10 8 11 21.5t-7 23.5z">
+                                        </path>
+                                    </svg>
+                                </span>
+            <span class="mx-2 text-sm font-normal">
+                                    Home
+                                </span>
+          </a>
+        </th:block>
+        <th:block th:if="${session.loginId}">
+          <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/MyPage">
+                              <span class="text-left">
+                                  <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                    <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
+                                  </svg>
+                              </span>
+            <span class="mx-2 text-sm font-normal">
+                                  My Page
+                              </span>
+          </a>
+        </th:block>
+        <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Single">
+                            <span class="text-left">
+                                <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                  <path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+          <span class="mx-2 text-sm font-normal">
+                                Medicine Search
+                            </span>
+        </a>
+        <a class="flex items-center justify-start w-full p-2 pl-6 my-2 text-white transition-colors duration-200 border-l-4 border-transparent hover:text-gray-800" href="/member/Analysis" style="border-left-color: #eaf8f9;">
+                            <span class="text-left">
+                                <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5">
+                                    <path fill-rule="evenodd" d="M16.098 2.598a3.75 3.75 0 1 1 3.622 6.275l-1.72.46V12a.75.75 0 0 1-.22.53l-.75.75a.75.75 0 0 1-1.06 0l-.97-.97-7.94 7.94a2.56 2.56 0 0 1-1.81.75 1.06 1.06 0 0 0-.75.31l-.97.97a.75.75 0 0 1-1.06 0l-.75-.75a.75.75 0 0 1 0-1.06l.97-.97a1.06 1.06 0 0 0 .31-.75c0-.68.27-1.33.75-1.81L11.69 9l-.97-.97a.75.75 0 0 1 0-1.06l.75-.75A.75.75 0 0 1 12 6h2.666l.461-1.72c.165-.617.49-1.2.971-1.682Zm-3.348 7.463L4.81 18a1.06 1.06 0 0 0-.31.75c0 .318-.06.63-.172.922a2.56 2.56 0 0 1 .922-.172c.281 0 .551-.112.75-.31l7.94-7.94-1.19-1.19Z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+          <span class="mx-2 text-sm font-normal">
+                                Medicine Analysis
+                            </span>
+        </a>
+      </div>
+    </nav>
+  </div>
+  <div class="ml-10 mt-8 mb-3 flex justify-center items-start flex-wrap">
+    <div class="relative rounded-2xl overflow-hidden bg-white shadow-lg dark:bg-gray-700 flex justify-center" style="width:1065px;">
+      <div class="ml-7 w-full">
+        <form id="searchForm">
+          <div class="flex items-center">
+            <label for="drugList" class="mt-5 mr-1 border-b border-gray-200 inline-block">검색창</label>
+            <label></label>
+          </div>
+          <div class="inline-flex items-center">
+            <input type="medicine" id="entpName" class="mr-3" placeholder="회사명으로 검색" style="width:393px">
+            <input type="medicine" id="itemName" class="mr-3" placeholder="약품명으로 검색" style="width:393px">
+            <button type="submit" class="flex justify-center items-center block mb-3 px-3 py-2 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277; width:200px">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+              검색
+            </button>
+          </div>
+        </form>
+        <div class="inline-flex items-center mb-3">
+          <button id="prevPage" class="flex justify-center items-center block px-3 py-2 mr-3 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277; width:500px">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5" />
+            </svg>
+            이전 페이지
+          </button>
+          <button id="nextPage" class="flex justify-center items-center block px-3 py-2 mr-3 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277; width:500px">
+            다음 페이지
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mb-1" style="width: 24px; height: 24px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        </div>
+        <div class="inline-flex items-center mb-3">
+          <button id="backPage" class="flex justify-center items-center block px-3 py-2 mr-3 mt-3 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100" style="background-color: #057277; width:1000px">
+            그만 보기
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="MedicineList" class="mt-3 flex justify-center p-2">
+    </div>
+  </div>
+  <div class="mt-6 mb-3 flex justify-center items-start flex-wrap">
+    <div id="GraphList1" class="chart-container mr-10">
+      <div class="md:w-full" style="width:500px">
+        <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-4 bg-white shadow-lg dark:bg-gray-700">
+          <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+            Graph
+          </p>
+          <div id="chartTitle1" class="text-2xl font-bold flex items-end my-2">
+          </div>
+          <div class="chart">
+            <canvas id="myChart"></canvas>
+          </div>
+          <div id="resultText1">
+          </div>
+          <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+          </div>
+          <div id="resultText1-1">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="GraphList2" class="chart-container ml-6 mr-11">
+      <div class="md:w-full" style="width:500px">
+        <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-4 bg-white shadow-lg dark:bg-gray-700">
+          <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+            Graph
+          </p>
+          <div id="chartTitle2" class="text-2xl font-bold flex items-end my-2">
+          </div>
+          <div class="chart">
+            <canvas id="myChart2"></canvas>
+          </div>
+          <div id="resultText2">
+          </div>
+          <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+          </div>
+          <div id="resultText2-1">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const content = document.getElementById('content');
+
+    // 초기 로드 시 페이드 인
+    setTimeout(() => {
+      content.classList.add('fade-enter-active');
+    }, 0);
+
+    // 페이지를 떠날 때 페이드 아웃
+    const links = document.querySelectorAll('.nav-link');
+    links.forEach(link => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault(); // 기본 링크 동작 방지
+
+        content.classList.remove('fade-enter-active');
+        content.classList.add('fade-leave-active');
+
+        setTimeout(() => {
+          window.location.href = link.href; // 페이지 이동
+        }, 600); // 페이드 아웃 시간과 일치
+      });
+    });
+  });
+
+  // 세션에 저장된 로그인 ID를 가져와서 데이터 속성에 할당
+  var loginId = document.body.dataset.loginId;
+  window.myChart = undefined;
+  window.myChart2 = undefined;
+
+  const percentagePlugin = {
+    id: 'percentagePlugin',
+    afterDatasetsDraw: function(chart) {
+      const ctx = chart.ctx;
+      const { width, height } = chart.chartArea;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.save();
+      ctx.font = 'bold 20px Arial'; // 텍스트를 굵게 설정
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const dataset = chart.data.datasets[0];
+      const total = dataset.data.reduce((sum, value) => sum + value, 0);
+      const percentage = dataset.data[0] / total * 100;
+
+      // 첫 번째 데이터의 배경색을 텍스트 색으로 설정
+      ctx.fillStyle = dataset.backgroundColor[0];
+
+      // 텍스트 위치를 조금 더 조정
+      ctx.fillText(percentage.toFixed(2) + '%', centerX + 5, centerY + 35);
+      ctx.restore();
+    }
+  };
+
+  // 플러그인 전역 등록
+  Chart.register(percentagePlugin);
+
+  $(document).ready(function() {
+    // 처음 로딩 시 검색 결과 표시
+    searchDrugs(currentPageNo);
+    $("#GraphList1").hide();
+    $("#GraphList2").hide();
+    $("#backPage").hide();
+  });
+
+  function openMenu() {
+    document.getElementById("menuBar").style.left = "0px";
+    document.body.style.marginLeft = "250px"; // 본문 내용을 오른쪽으로 이동
+  }
+
+  function closeMenu() {
+    document.getElementById("menuBar").style.left = "-220px";
+    document.body.style.marginLeft = "0"; // 본문 내용을 원래 위치로 이동
+  }
+
+  // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+  document.addEventListener("mousemove", function(event) {
+    if (event.clientX < 10) {
+      openMenu();
+    }
+  });
+
+  function createMedicineDiv(itemName, entpName, atpnQesitm, efcyQesitm, useMethodQesitm) {
+    var displayName = itemName.indexOf('(') > -1 ? itemName.substring(0, itemName.indexOf('(')).trim() : itemName;
+
+    // 새로운 div 요소 생성
+    var customDiv = document.createElement('div');
+    customDiv.className = 'md:w-full mr-11 animate-pulse bounce-animation';
+    customDiv.style.width = '1065px';
+
+    // 내부 HTML 설정
+    customDiv.innerHTML = `
+        <div class="relative mx-6 rounded-2xl overflow-hidden w-full px-4 py-4 bg-white shadow-lg dark:bg-gray-700">
+            <p class="text-sm font-semibold text-gray-700 border-b border-gray-200 w-max dark:text-white">
+                Medicine
+            </p>
+            <div class="flex items-end my-2">
+                <p class="text-3xl font-bold text-black dark:text-white">
+                    ${displayName}
+                </p>
+                <span class="flex items-center ml-3 text-xl font-bold text-green-500">
+                    <svg width="20" fill="currentColor" height="20" class="h-3" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1675 971q0 51-37 90l-75 75q-38 38-91 38-54 0-90-38l-294-293v704q0 52-37.5 84.5t-90.5 32.5h-128q-53 0-90.5-32.5t-37.5-84.5v-704l-294 293q-36 38-90 38t-90-38l-75-75q-38-38-38-90 0-53 38-91l651-651q35-37 90-37 54 0 91 37l651 651q37 39 37 91z">
+                        </path>
+                    </svg>
+                    Search
+                </span>
+                <button
+                  class="selectButton flex justify-center items-right block px-3 py-2 ml-10 text-l font-bold text-white uppercase rounded-2xl hover:bg-gray-100"
+                  style="background-color: #057277FF; width: 200px;"
+                  data-entp-name="${entpName}"
+                  data-item-name="${itemName}"
+                  data-efcy-qesitm="${efcyQesitm}"
+                  data-atpn-qesitm="${atpnQesitm}"
+                  data-use-method-qesitm="${useMethodQesitm}">
+                  분석하기
+                </button>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        제조사 : ${entpName}
+                    </p>
+                </div>
+            </div>
+            <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        효능 : ${efcyQesitm}
+                    </p>
+                </div>
+            </div>
+                        <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        주의사항 : ${atpnQesitm}
+                    </p>
+                </div>
+            </div>
+                        <div class="dark:text-white">
+                <div class="flex items-center justify-between pb-2 mb-2 text-sm border-b border-gray-200 sm:space-x-12">
+                    <p>
+                        사용방법 : ${useMethodQesitm}
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 특정 div에 추가
+    var targetDiv = document.getElementById('MedicineList');
+    targetDiv.appendChild(customDiv);
+  }
+
+  // 왼쪽 끝으로 마우스가 이동했을 때 메뉴가 나타나도록 설정
+  document.addEventListener("mousemove", function(event) {
+    if (event.clientX < 10) {
+      openMenu();
+    }
+  });
+
+  var currentPageNo = 1;
+  var numOfRows = 10;
+
+  function searchDrugs(pageNo) {
+    const entpName = $("#entpName").val();
+    const itemName = $("#itemName").val();
+
+    $.ajax({
+      method: "GET",
+      url: "http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList",
+      data: {
+        serviceKey: "b+gZfgfN+HH+duTxDk+pgGHcRLu3E1RxHx/PjuL4xPp9OeHZIVmYTA0XID3lNEQXiACvRAy+80kEc6yqJW+LBA==",
+        entpName: entpName,
+        itemName: itemName,
+        pageNo: pageNo,
+        numOfRows: numOfRows,
+        type: "json"
+      },
+      dataType: "json"
+    }).done(function (response) {
+      items = response.body.items;
+      document.getElementById('MedicineList').innerHTML = '';
+
+      $.each(items, function (i, item) {
+        var entpName = item.entpName;
+        var itemName = item.itemName;
+        var atpnQesitm = item.atpnQesitm;
+        var efcyQesitm = item.efcyQesitm;
+        var useMethodQesitm = item.useMethodQesitm;
+
+        createMedicineDiv(itemName, entpName, atpnQesitm, efcyQesitm, useMethodQesitm);
+      });
+      const totalCount = response.response.body.totalCount;
+      updatePaginationButtons(totalCount);
+    });
+  }
+
+  function updatePaginationButtons(totalCount) {
+    $("#prevPage").prop("disabled", currentPageNo <= 1);
+    $("#nextPage").prop("disabled", (currentPageNo * numOfRows) >= totalCount);
+  }
+
+  $(document).on("click", ".selectButton", function() {
+    if(loginId === undefined)
+    {
+      alert("로그인이 필요한 기능입니다.");
+    }
+    else
+    {
+      var formDisease = {
+        entpName: $(this).data("entp-name"),
+        itemName: $(this).data("item-name"),
+        efcyQesitm: $(this).data("efcy-qesitm"),
+        atpnQesitm: $(this).data("atpn-qesitm"),
+        useMethodQesitm: $(this).data("use-method-qesitm")
+      };
+
+      MedicineCompareDanger(formDisease);
+      MedicineCompareWarning(formDisease);
+
+      $("#MedicineList").hide();
+      $("#GraphList1").show();
+      $("#GraphList2").show();
+      $("#backPage").show();
+      $("#prevPage").hide();
+      $("#nextPage").hide();
+    }
+  });
+
+  // 검색 폼 제출 이벤트
+  $("#searchForm").submit(function(event) {
+    event.preventDefault();
+    currentPageNo = 1;
+    searchDrugs(currentPageNo);
+    $("#GraphList1").hide();
+    $("#GraphList2").hide();
+    $("#backPage").hide();
+    $("#MedicineList").show();
+    $("#prevPage").show();
+    $("#nextPage").show();
+  });
+
+  // 이전 페이지 버튼 클릭 이벤트
+  $("#prevPage").click(function(event) {
+    event.preventDefault();
+    if (currentPageNo > 1) {
+      currentPageNo--;
+      searchDrugs(currentPageNo);
+    }
+  });
+
+  // 다음 페이지 버튼 클릭 이벤트
+  $("#nextPage").click(function(event) {
+    event.preventDefault();
+    currentPageNo++;
+    searchDrugs(currentPageNo);
+  });
+
+  $("#backPage").click(function(event) {
+    event.preventDefault();
+    $("#MedicineList").show();
+    $("#GraphList1").hide();
+    $("#GraphList2").hide();
+    $("#backPage").hide();
+    $("#prevPage").show();
+    $("#nextPage").show();
+  });
+
+
+  function MedicineCompareDanger(formData) {
+    var danger_cnt = 0;
+    var safe_cnt_1 = 0;
+    var danger_med = []; // 위험한 약물을 저장할 배열
+
+    $.ajax({
+      method: "GET",
+      url: "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04",
+      data: {
+        serviceKey: "pTNRi22KX1NRbOD7ZWsTngtCRegEP2WII0o+NvLPeE3/tpJ+aUtv7Dhf2pR1iv4AjLolK/IyGeJObgLGREO5Dg==",
+        item_name: formData.itemName,
+        entp_name: formData.entpName,
+        type: "json"
+      },
+      dataType: "json"
+    }).done(function(response) {
+      items = response.body.items;
+      if (items.length > 0) {
+        var materialName = items[0].MATERIAL_NAME;
+        var interactionResult = "안전";
+        var medMaterials = materialName ? extractMaterials(materialName, formData.itemName) : [];
+        console.log("MATERIAL_NAME:", medMaterials);
+
+        $.ajax({
+          url: "/member/mypage/interaction2",
+          type: "GET",
+          data: { memberId: loginId },
+          success: function(interactions) {
+            let promises = []; // 비동기 작업을 저장할 배열
+
+            interactions.forEach(function(interaction) {
+              var danger = interaction.drugInteractionDanger ? interaction.drugInteractionDanger.split(',').map(d => d.trim().toLowerCase()) : [];
+              var dangerConflict = medMaterials.filter(m => danger.some(d => d.includes(m) || m.includes(d)));
+
+              if (dangerConflict.length > 0) {
+                interactionResult = '위험';
+                danger_cnt++;
+                console.log("위험합니다!!");
+
+                // 비동기 작업을 Promise로 감싸서 배열에 추가
+                let promise = new Promise((resolve, reject) => {
+                  $.ajax({
+                    url: "/member/mypage/medName",
+                    type: "GET",
+                    data: {medicineId: interaction.medicineId},
+                    success: function (ans) {
+                      danger_med.push(ans);
+                      resolve(); // 비동기 작업이 성공적으로 완료되면 resolve를 호출
+                    },
+                    error: function() {
+                      reject(); // 비동기 작업이 실패하면 reject를 호출
+                    }
+                  });
+                });
+
+                promises.push(promise);
+
+              } else {
+                console.log("안전입니다!!");
+                safe_cnt_1++;
+              }
+            });
+
+            // 모든 비동기 작업이 완료될 때까지 기다린 후 결과 처리
+            Promise.all(promises).then(() => {
+              console.log("검사 완료1");
+              var select_itemName = formData.itemName;
+              // 시각화
+              visualizeDanger(danger_cnt, safe_cnt_1, select_itemName, danger_med); // danger_med를 인자로 전달
+            });
+          },
+          error: function() {
+            console.error("상호작용 데이터를 불러오는 데 실패했습니다.");
+          }
+        });
+      }
+    });
+  }
+
+  function MedicineCompareWarning(formData) {
+    var warning_cnt = 0;
+    var safe_cnt_2 = 0; // 수정: 변수 이름을 일관성 있게 변경
+    var warning_med = []; // 수정: 오타를 수정했습니다 ('waring_med' -> 'warning_med')
+
+    $.ajax({
+      method: "GET",
+      url: "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService05/getDrugPrdtPrmsnDtlInq04",
+      data: {
+        serviceKey: "pTNRi22KX1NRbOD7ZWsTngtCRegEP2WII0o+NvLPeE3/tpJ+aUtv7Dhf2pR1iv4AjLolK/IyGeJObgLGREO5Dg==",
+        item_name: formData.itemName,
+        entp_name: formData.entpName,
+        type: "json"
+      },
+      dataType: "json"
+    }).done(function(response) {
+      var items = response.body.items; // 수정: var 추가
+      if (items.length > 0) {
+        var materialName = items[0].MATERIAL_NAME;
+        var interactionResult = "안전";
+        var medMaterials = materialName ? extractMaterials(materialName, formData.itemName) : [];
+        console.log("MATERIAL_NAME:", medMaterials);
+
+        $.ajax({
+          url: "/member/mypage/interaction2",
+          type: "GET",
+          data: { memberId: loginId },
+          success: function(interactions) {
+            let promises = [];
+
+            interactions.forEach(function(interaction) {
+              var warn = interaction.drugInteractionWarn ? interaction.drugInteractionWarn.split(',').map(w => w.trim().toLowerCase()) : [];
+              var food = interaction.drugFoodInteraction ? interaction.drugFoodInteraction.split(',').map(f => f.trim().toLowerCase()) : [];
+              var condition = interaction.drugConditionInteraction ? interaction.drugConditionInteraction.split(',').map(c => c.trim().toLowerCase()) : [];
+
+              var warnConflict = medMaterials.filter(m => warn.some(w => w.includes(m) || m.includes(w)));
+              var foodConflict = medMaterials.filter(m => food.some(f => f.includes(m) || m.includes(f)));
+              var conditionConflict = medMaterials.filter(m => condition.some(c => c.includes(m) || m.includes(c)));
+
+              if (warnConflict.length > 0 || foodConflict.length > 0 || conditionConflict.length > 0) {
+                interactionResult = '주의';
+                console.log("주의합니다!!");
+                warning_cnt++;
+
+                let promise = new Promise((resolve, reject) => {
+                  $.ajax({
+                    url: "/member/mypage/medName",
+                    type: "GET",
+                    data: { medicineId: interaction.medicineId },
+                    success: function(ans) {
+                      warning_med.push(ans); // 수정: 오타를 수정했습니다.
+                      resolve(); // 비동기 작업이 성공적으로 완료되면 resolve를 호출
+                    },
+                    error: function() {
+                      reject(); // 비동기 작업이 실패하면 reject를 호출
+                    }
+                  });
+                });
+
+                promises.push(promise);
+
+              } else {
+                console.log("안전입니다!!");
+                safe_cnt_2++; // 수정: 변수 이름을 일관성 있게 변경
+              }
+            });
+
+            Promise.all(promises).then(function() { // 추가: 모든 프로미스가 완료된 후에 실행
+              console.log("검사 완료2");
+              var select_itemName = formData.itemName;
+              // 시각화
+              visualizeWarning(warning_cnt, safe_cnt_2, select_itemName, warning_med);
+            });
+          },
+          error: function() {
+            console.error("상호작용 데이터를 불러오는 데 실패했습니다.");
+          }
+        });
+      }
+    });
+  }
+
+  function visualizeDanger(dangerCount, safeCount, select_itemName, danger_med) {
+    var ctx = document.getElementById('myChart').getContext('2d');
+    const matchingPercentage = (dangerCount / (safeCount+dangerCount)) * 100;
+
+    const data1 = {
+      labels: ['위험', '안전'],
+      datasets: [{
+        label: '결과',
+        data: [dangerCount, safeCount],
+        backgroundColor: ['#C94F4F', '#008000'],
+      }]
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        percentagePlugin: true // 플러그인 활성화
+      }
+    };
+
+    // 기존 차트를 파괴하고 새로 생성
+    if (window.myChart1) {
+      window.myChart1.destroy();
+    }
+    window.myChart1 = new Chart(ctx, { type: 'doughnut', data: data1, options: options });
+
+    document.getElementById('chartTitle1').innerText = select_itemName;
+
+    // 텍스트 업데이트
+    const resultText1 = `Total Interaction Medicine Count: ${safeCount+dangerCount}
+             Dangerous Medicine Count: ${dangerCount}
+             Safety Medicine Count: ${safeCount}
+             Percentage: ${matchingPercentage.toFixed(2)}%`;
+    document.getElementById('resultText1').innerText = resultText1;
+
+    // 질병명 업데이트
+    const resultTextContainer = document.getElementById('resultText1-1');
+    resultTextContainer.innerHTML = '';
+
+    danger_med.forEach(function(item) {
+      const itemElement = document.createElement('div');
+      itemElement.classList.add('dark:text-white', 'flex', 'items-center', 'justify-between', 'pb-2', 'mb-2', 'font-bold', 'text-l', 'border-b', 'border-gray-200', 'sm:space-x-12');
+      itemElement.innerHTML = `<p>약물명 : ${item}</p>`;
+      resultTextContainer.appendChild(itemElement);
+    });
+  }
+
+  function visualizeWarning(warningCount, safeCount, select_itemName, waring_med) {
+    var ctx = document.getElementById('myChart2').getContext('2d');
+    const matchingPercentage = (warningCount / (safeCount+warningCount)) * 100;
+
+    const data1 = {
+      labels: ['주의', '안전'],
+      datasets: [{
+        label: '결과',
+        data: [warningCount, safeCount],
+        backgroundColor: ['#e6a23c', '#008000'],
+      }]
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        percentagePlugin: true // 플러그인 활성화
+      }
+    };
+
+    // 기존 차트를 파괴하고 새로 생성
+    if (window.myChart2) {
+      window.myChart2.destroy();
+    }
+    window.myChart2 = new Chart(ctx, { type: 'doughnut', data: data1, options: options });
+
+    document.getElementById('chartTitle2').innerText = select_itemName;
+
+    // 텍스트 업데이트
+    const resultText1 = `Total Interaction Medicine Count: ${safeCount+warningCount}
+             Warning Medicine Count: ${warningCount}
+             Safety Medicine Count: ${safeCount}
+             Percentage: ${matchingPercentage.toFixed(2)}%`;
+    document.getElementById('resultText2').innerText = resultText1;
+
+    // 질병명 업데이트
+    const resultTextContainer = document.getElementById('resultText2-1');
+    resultTextContainer.innerHTML = '';
+
+    waring_med.forEach(function(item) {
+      const itemElement = document.createElement('div');
+      itemElement.classList.add('dark:text-white', 'flex', 'items-center', 'justify-between', 'pb-2', 'mb-2', 'font-bold', 'text-l', 'border-b', 'border-gray-200', 'sm:space-x-12');
+      itemElement.innerHTML = `<p>약물명 : ${item}</p>`;
+      resultTextContainer.appendChild(itemElement);
+    });
+  }
+
+
+  function extractMaterials(materialData, itemName) {
+    var materials = [];
+    var entries = materialData.split('|');
+    entries.forEach(function(entry) {
+      var parts = entry.split(':');
+      parts.forEach(function(part, index) {
+        if (index === 0 && part.trim() === "성분명") {
+          for (var i = 1; i < parts.length; i++) {
+            var material = parts[i].trim().toLowerCase();
+            materials.push(material);
+          }
+        }
+      });
+    });
+
+    if (itemName) {
+      var regex = /\(([^)]+)\)/g;
+      var matches = itemName.match(regex);
+      if (matches) {
+        matches.forEach(function(match) {
+          var content = match.substring(1, match.length - 1);
+          var innerMaterials = content.split(',').map(function(mat) {
+            return mat.trim().toLowerCase();
+          });
+          materials = materials.concat(innerMaterials);
+        });
+      }
+    }
+
+    return materials;
+  }
+</script>
+
+

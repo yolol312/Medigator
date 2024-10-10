@@ -1,0 +1,26 @@
+server:
+  port: 8081
+
+# database 연동 설정
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/db_medigator?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: 1234
+  thymeleaf:
+    cache: false
+
+  # spring data jpa 설정
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+
+# OpenAI API 설정
+openai:
+  api:
+    key: sk-proj-Sxdm5WIeKIL0DT8NMATmT3BlbkFJFV3KnWpo5Lv6jlmYOHUD
