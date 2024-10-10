@@ -79,6 +79,8 @@
 <img src="https://github.com/dbehdgns1215/Medigator/assets/77192122/460787fd-1888-4042-9468-8370f1f1f36a">
 <img src="https://github.com/dbehdgns1215/Medigator/assets/77192122/c8d7674f-a676-4172-8114-0c5b92bedfcc">
 
+<h3>완성 디자인</h3>
+![image](https://github.com/user-attachments/assets/f5a7ba3a-29e6-4ed2-a68d-4ed806dd2bf6)
 
 
 
